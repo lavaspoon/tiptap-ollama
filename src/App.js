@@ -1,25 +1,19 @@
-import logo from './logo.svg';
+import React from 'react';
 import './App.css';
+import TiptapEditor from "./Tiptapeditor";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    return (
+        <div className="app">
+            <header className="app-header">
+                <h1>Tiptap 에디터</h1>
+                <p>리액트로 구현한 리치 텍스트 에디터</p>
+            </header>
+            <main className="app-main">
+                <TiptapEditor />
+            </main>
+        </div>
+    );
 }
 
 export default App;
