@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
@@ -50,11 +50,9 @@ const AICommandModal = ({ isOpen, onClose, selectedText, editor }) => {
         setCurrentCommand(command);
 
         try {
-            // Ollama API 호출
             let prompt = '';
 
             if (customPrompt) {
-                // 직접 질문하기
                 prompt = `당신은 전문적인 AI 어시스턴트입니다. 다음 텍스트와 관련하여 사용자의 질문에 답변해주세요.
 
 [요청사항]
@@ -174,7 +172,6 @@ ${selectedText}
 
     const handleAccept = () => {
         if (aiResult && editor) {
-            // 선택된 텍스트를 AI 결과로 교체
             editor.chain().focus().insertContent(aiResult).run();
             handleClose();
         }
@@ -216,13 +213,8 @@ ${selectedText}
 
                 {!aiResult && !isLoading && !showAskAI && (
                     <div className="ai-modal-commands">
-                        <button
-                            className="ai-command-button"
-                            onClick={() => handleCommand('summarize')}
-                        >
-                            <div className="ai-command-icon">
-                                <FileText size={20} />
-                            </div>
+                        <button className="ai-command-button" onClick={() => handleCommand('summarize')}>
+                            <div className="ai-command-icon"><FileText size={20} /></div>
                             <div className="ai-command-info">
                                 <div className="ai-command-title">요약하기</div>
                                 <div className="ai-command-desc">핵심 내용을 간결하게</div>
@@ -230,13 +222,8 @@ ${selectedText}
                             <ChevronRight size={16} className="ai-command-arrow" />
                         </button>
 
-                        <button
-                            className="ai-command-button"
-                            onClick={() => handleCommand('continue')}
-                        >
-                            <div className="ai-command-icon">
-                                <PenLine size={20} />
-                            </div>
+                        <button className="ai-command-button" onClick={() => handleCommand('continue')}>
+                            <div className="ai-command-icon"><PenLine size={20} /></div>
                             <div className="ai-command-info">
                                 <div className="ai-command-title">계속 작성하기</div>
                                 <div className="ai-command-desc">자연스럽게 이어서</div>
@@ -244,13 +231,8 @@ ${selectedText}
                             <ChevronRight size={16} className="ai-command-arrow" />
                         </button>
 
-                        <button
-                            className="ai-command-button"
-                            onClick={() => handleCommand('improve')}
-                        >
-                            <div className="ai-command-icon">
-                                <Sparkles size={20} />
-                            </div>
+                        <button className="ai-command-button" onClick={() => handleCommand('improve')}>
+                            <div className="ai-command-icon"><Sparkles size={20} /></div>
                             <div className="ai-command-info">
                                 <div className="ai-command-title">개선하기</div>
                                 <div className="ai-command-desc">더 명확하고 전문적으로</div>
@@ -258,13 +240,8 @@ ${selectedText}
                             <ChevronRight size={16} className="ai-command-arrow" />
                         </button>
 
-                        <button
-                            className="ai-command-button"
-                            onClick={() => handleCommand('translate')}
-                        >
-                            <div className="ai-command-icon">
-                                <Languages size={20} />
-                            </div>
+                        <button className="ai-command-button" onClick={() => handleCommand('translate')}>
+                            <div className="ai-command-icon"><Languages size={20} /></div>
                             <div className="ai-command-info">
                                 <div className="ai-command-title">번역하기</div>
                                 <div className="ai-command-desc">한국어 → 영어</div>
@@ -272,13 +249,8 @@ ${selectedText}
                             <ChevronRight size={16} className="ai-command-arrow" />
                         </button>
 
-                        <button
-                            className="ai-command-button ai-command-ask"
-                            onClick={() => setShowAskAI(true)}
-                        >
-                            <div className="ai-command-icon">
-                                <MessageSquare size={20} />
-                            </div>
+                        <button className="ai-command-button ai-command-ask" onClick={() => setShowAskAI(true)}>
+                            <div className="ai-command-icon"><MessageSquare size={20} /></div>
                             <div className="ai-command-info">
                                 <div className="ai-command-title">AI에게 질문하기</div>
                                 <div className="ai-command-desc">자유롭게 물어보세요</div>
@@ -297,19 +269,15 @@ ${selectedText}
                             <span>AI에게 질문하기</span>
                         </div>
                         <form onSubmit={handleAskAISubmit} className="ai-ask-form">
-              <textarea
-                  className="ai-ask-input"
-                  placeholder="선택한 텍스트에 대해 궁금한 점을 질문해보세요..."
-                  value={askAIInput}
-                  onChange={(e) => setAskAIInput(e.target.value)}
-                  autoFocus
-                  rows={6}
-              />
-                            <button
-                                type="submit"
-                                className="ai-ask-submit"
-                                disabled={!askAIInput.trim()}
-                            >
+                            <textarea
+                                className="ai-ask-input"
+                                placeholder="선택한 텍스트에 대해 궁금한 점을 질문해보세요..."
+                                value={askAIInput}
+                                onChange={(e) => setAskAIInput(e.target.value)}
+                                autoFocus
+                                rows={6}
+                            />
+                            <button type="submit" className="ai-ask-submit" disabled={!askAIInput.trim()}>
                                 <Send size={18} />
                                 질문하기
                             </button>
@@ -330,18 +298,10 @@ ${selectedText}
                             <Sparkles size={16} />
                             <strong>AI 결과</strong>
                         </div>
-                        <div className="ai-result-content">
-                            {aiResult}
-                        </div>
+                        <div className="ai-result-content">{aiResult}</div>
                         <div className="ai-result-actions">
-                            <button className="ai-action-reject" onClick={handleReject}>
-                                <X size={18} />
-                                취소
-                            </button>
-                            <button className="ai-action-accept" onClick={handleAccept}>
-                                <Check size={18} />
-                                적용하기
-                            </button>
+                            <button className="ai-action-reject" onClick={handleReject}><X size={18} />취소</button>
+                            <button className="ai-action-accept" onClick={handleAccept}><Check size={18} />적용하기</button>
                         </div>
                     </div>
                 )}
@@ -351,145 +311,31 @@ ${selectedText}
 };
 
 const MenuBar = ({ editor }) => {
-    if (!editor) {
-        return null;
-    }
+    if (!editor) return null;
 
     return (
         <div className="menu-bar">
-            <button
-                onClick={() => editor.chain().focus().undo().run()}
-                disabled={!editor.can().undo()}
-                className="menu-button"
-                title="실행 취소"
-            >
-                <Undo size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().redo().run()}
-                disabled={!editor.can().redo()}
-                className="menu-button"
-                title="다시 실행"
-            >
-                <Redo size={18} />
-            </button>
-
+            <button onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className="menu-button" title="실행 취소"><Undo size={18} /></button>
+            <button onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className="menu-button" title="다시 실행"><Redo size={18} /></button>
             <div className="divider"></div>
-
-            <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                className={editor.isActive('heading', { level: 1 }) ? 'menu-button is-active' : 'menu-button'}
-                title="제목 1"
-            >
-                <Heading1 size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                className={editor.isActive('heading', { level: 2 }) ? 'menu-button is-active' : 'menu-button'}
-                title="제목 2"
-            >
-                <Heading2 size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                className={editor.isActive('heading', { level: 3 }) ? 'menu-button is-active' : 'menu-button'}
-                title="제목 3"
-            >
-                <Heading3 size={18} />
-            </button>
-
+            <button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={editor.isActive('heading', { level: 1 }) ? 'menu-button is-active' : 'menu-button'} title="제목 1"><Heading1 size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'menu-button is-active' : 'menu-button'} title="제목 2"><Heading2 size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'menu-button is-active' : 'menu-button'} title="제목 3"><Heading3 size={18} /></button>
             <div className="divider"></div>
-
-            <button
-                onClick={() => editor.chain().focus().toggleBulletList().run()}
-                className={editor.isActive('bulletList') ? 'menu-button is-active' : 'menu-button'}
-                title="글머리 기호 목록"
-            >
-                <List size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                className={editor.isActive('orderedList') ? 'menu-button is-active' : 'menu-button'}
-                title="번호 매기기 목록"
-            >
-                <ListOrdered size={18} />
-            </button>
-
+            <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={editor.isActive('bulletList') ? 'menu-button is-active' : 'menu-button'} title="글머리 기호 목록"><List size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={editor.isActive('orderedList') ? 'menu-button is-active' : 'menu-button'} title="번호 매기기 목록"><ListOrdered size={18} /></button>
             <div className="divider"></div>
-
-            <button
-                onClick={() => editor.chain().focus().toggleBold().run()}
-                className={editor.isActive('bold') ? 'menu-button is-active' : 'menu-button'}
-                title="굵게"
-            >
-                <Bold size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleItalic().run()}
-                className={editor.isActive('italic') ? 'menu-button is-active' : 'menu-button'}
-                title="기울임"
-            >
-                <Italic size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleStrike().run()}
-                className={editor.isActive('strike') ? 'menu-button is-active' : 'menu-button'}
-                title="취소선"
-            >
-                <Strikethrough size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleCode().run()}
-                className={editor.isActive('code') ? 'menu-button is-active' : 'menu-button'}
-                title="인라인 코드"
-            >
-                <Code size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleUnderline().run()}
-                className={editor.isActive('underline') ? 'menu-button is-active' : 'menu-button'}
-                title="밑줄"
-            >
-                <UnderlineIcon size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().toggleHighlight().run()}
-                className={editor.isActive('highlight') ? 'menu-button is-active' : 'menu-button'}
-                title="형광펜"
-            >
-                <Highlighter size={18} />
-            </button>
-
+            <button onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'menu-button is-active' : 'menu-button'} title="굵게"><Bold size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'menu-button is-active' : 'menu-button'} title="기울임"><Italic size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleStrike().run()} className={editor.isActive('strike') ? 'menu-button is-active' : 'menu-button'} title="취소선"><Strikethrough size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleCode().run()} className={editor.isActive('code') ? 'menu-button is-active' : 'menu-button'} title="인라인 코드"><Code size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'menu-button is-active' : 'menu-button'} title="밑줄"><UnderlineIcon size={18} /></button>
+            <button onClick={() => editor.chain().focus().toggleHighlight().run()} className={editor.isActive('highlight') ? 'menu-button is-active' : 'menu-button'} title="형광펜"><Highlighter size={18} /></button>
             <div className="divider"></div>
-
-            <button
-                onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                className={editor.isActive({ textAlign: 'left' }) ? 'menu-button is-active' : 'menu-button'}
-                title="왼쪽 정렬"
-            >
-                <AlignLeft size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                className={editor.isActive({ textAlign: 'center' }) ? 'menu-button is-active' : 'menu-button'}
-                title="가운데 정렬"
-            >
-                <AlignCenter size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                className={editor.isActive({ textAlign: 'right' }) ? 'menu-button is-active' : 'menu-button'}
-                title="오른쪽 정렬"
-            >
-                <AlignRight size={18} />
-            </button>
-            <button
-                onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                className={editor.isActive({ textAlign: 'justify' }) ? 'menu-button is-active' : 'menu-button'}
-                title="양쪽 정렬"
-            >
-                <AlignJustify size={18} />
-            </button>
+            <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={editor.isActive({ textAlign: 'left' }) ? 'menu-button is-active' : 'menu-button'} title="왼쪽 정렬"><AlignLeft size={18} /></button>
+            <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={editor.isActive({ textAlign: 'center' }) ? 'menu-button is-active' : 'menu-button'} title="가운데 정렬"><AlignCenter size={18} /></button>
+            <button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={editor.isActive({ textAlign: 'right' }) ? 'menu-button is-active' : 'menu-button'} title="오른쪽 정렬"><AlignRight size={18} /></button>
+            <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={editor.isActive({ textAlign: 'justify' }) ? 'menu-button is-active' : 'menu-button'} title="양쪽 정렬"><AlignJustify size={18} /></button>
         </div>
     );
 };
@@ -501,34 +347,28 @@ const TiptapEditor = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [lastAnalyzedText, setLastAnalyzedText] = useState('');
     const [isApplying, setIsApplying] = useState(false);
+    const [highlightRange, setHighlightRange] = useState(null);
+    const highlightTimeoutRef = useRef(null);
 
     const editor = useEditor({
         extensions: [
             StarterKit,
             Underline,
-            Highlight.configure({
-                multicolor: true,
-            }),
-            TextAlign.configure({
-                types: ['heading', 'paragraph'],
-            }),
+            Highlight.configure({ multicolor: true }),
+            TextAlign.configure({ types: ['heading', 'paragraph'] }),
         ],
         content: `
-      <p>
-        텍스트를 <strong>선택</strong>하면 <em>Bubble Menu</em>가 나타납니다. 
-        굵게, 기울임, 밑줄 등을 바로 적용할 수 있습니다.
-      </p>
-      <p>
-        <strong>Ctrl + Enter</strong>를 누르면 AI가 맞춤법과 어순을 분석하여 개선 제안을 제공합니다.
-      </p>
-      <p></p>
-    `,
+            <p>
+                텍스트를 <strong>선택</strong>하면 <em>Bubble Menu</em>가 나타납니다. 
+                굵게, 기울임, 밑줄 등을 바로 적용할 수 있습니다.
+            </p>
+            <p>
+                <strong>Ctrl + Enter</strong>를 누르면 AI가 맞춤법과 어순을 분석하여 개선 제안을 제공합니다.
+            </p>
+        `,
         editorProps: {
-            attributes: {
-                class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl focus:outline-none',
-            },
+            attributes: { class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl focus:outline-none' },
             handleKeyDown: (view, event) => {
-                // Ctrl + Enter (또는 Mac의 Cmd + Enter)로 AI 분석 트리거
                 if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                     event.preventDefault();
                     const text = view.state.doc.textContent.trim();
@@ -543,9 +383,7 @@ const TiptapEditor = () => {
     });
 
     const analyzeSentence = async (text) => {
-        // 이미 분석 중이거나 적용 중이면 중단
         if (isAnalyzing || isApplying) return;
-
         setIsAnalyzing(true);
         setLastAnalyzedText(text);
 
@@ -571,13 +409,6 @@ ${text}
     "description": "올바른 맞춤법으로 수정이 필요합니다",
     "original": "틀린 부분",
     "suggestion": "올바른 표현"
-  },
-  {
-    "type": "grammar",
-    "title": "어순 개선",
-    "description": "어순을 바꾸면 더 자연스럽습니다",
-    "original": "어색한 부분",
-    "suggestion": "개선된 표현"
   }
 ]
 
@@ -585,18 +416,12 @@ ${text}
 
             const response = await fetch('http://localhost:11434/api/generate', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: 'llama3.1:8b',
                     prompt: prompt,
                     stream: false,
-                    options: {
-                        temperature: 0.1,  // 더 정확한 분석을 위해 낮춤
-                        top_p: 0.9,
-                        max_tokens: 800,
-                    }
+                    options: { temperature: 0.1, top_p: 0.9, max_tokens: 800 }
                 }),
             });
 
@@ -604,23 +429,14 @@ ${text}
                 const data = await response.json();
                 try {
                     const result = data.response.trim();
-                    console.log('AI 응답:', result);
-
-                    // JSON 배열 추출
                     const jsonMatch = result.match(/\[[\s\S]*\]/);
-
                     if (jsonMatch) {
                         const parsedSuggestions = JSON.parse(jsonMatch[0]);
-                        console.log('파싱된 제안:', parsedSuggestions);
-
-                        // original과 suggestion이 있는 제안만 필터링
                         const validSuggestions = parsedSuggestions.filter(s =>
                             s.original && s.suggestion && s.original !== s.suggestion
                         ).slice(0, 3);
-
                         setSuggestions(validSuggestions);
                     } else {
-                        console.log('JSON 형식을 찾을 수 없음');
                         setSuggestions([]);
                     }
                 } catch (e) {
@@ -636,46 +452,119 @@ ${text}
         }
     };
 
-    const applySuggestion = (suggestion) => {
-        if (!editor || !suggestion.original || !suggestion.suggestion) {
-            console.log('적용 불가:', suggestion);
-            return;
-        }
-
-        setIsApplying(true);
+    const highlightSuggestion = (suggestion) => {
+        if (!editor || !suggestion.original) return;
 
         const { state } = editor;
         const { doc } = state;
-        const text = doc.textContent;
+        const fullText = doc.textContent;
+        const index = fullText.indexOf(suggestion.original);
 
-        console.log('전체 텍스트:', text);
-        console.log('찾을 텍스트:', suggestion.original);
+        if (index === -1) return;
 
-        const index = text.indexOf(suggestion.original);
-        if (index !== -1) {
-            const from = index;
-            const to = index + suggestion.original.length;
+        let fromPos = 0;
+        let toPos = 0;
+        let found = false;
 
-            console.log('교체 위치:', from, '-', to);
-            console.log('교체할 내용:', suggestion.suggestion);
+        doc.forEach((node, offset) => {
+            if (!found) {
+                const nodeText = node.textContent;
+                const posInNode = nodeText.indexOf(suggestion.original);
+
+                if (posInNode !== -1) {
+                    fromPos = offset + posInNode;
+                    toPos = fromPos + suggestion.original.length;
+                    found = true;
+                }
+            }
+        });
+
+        if (found) {
+            setHighlightRange({ from: fromPos, to: toPos });
+
+            // 하이라이트 클래스 적용
+            editor
+                .chain()
+                .focus()
+                .setTextSelection({ from: fromPos, to: toPos })
+                .run();
+
+            if (highlightTimeoutRef.current) {
+                clearTimeout(highlightTimeoutRef.current);
+            }
+
+            highlightTimeoutRef.current = setTimeout(() => {
+                setHighlightRange(null);
+                editor.chain().setTextSelection(0).run();
+            }, 3000);
+        }
+    };
+
+    const clearHighlight = () => {
+        if (highlightTimeoutRef.current) {
+            clearTimeout(highlightTimeoutRef.current);
+        }
+        setHighlightRange(null);
+        if (editor) {
+            editor.chain().setTextSelection(0).run();
+        }
+    };
+
+    const applySuggestion = (suggestion) => {
+        if (!editor || !suggestion.original || !suggestion.suggestion) return;
+
+        setIsApplying(true);
+
+        try {
+            const { state } = editor;
+            const { doc } = state;
+            const fullText = doc.textContent;
+            const index = fullText.indexOf(suggestion.original);
+
+            if (index === -1) {
+                setIsApplying(false);
+                return;
+            }
+
+            let fromPos = 0;
+            let toPos = 0;
+            let found = false;
+
+            doc.forEach((node, offset) => {
+                if (!found) {
+                    const nodeText = node.textContent;
+                    const posInNode = nodeText.indexOf(suggestion.original);
+
+                    if (posInNode !== -1) {
+                        fromPos = offset + posInNode;
+                        toPos = fromPos + suggestion.original.length;
+                        found = true;
+                    }
+                }
+            });
+
+            if (!found) {
+                setIsApplying(false);
+                return;
+            }
 
             editor
                 .chain()
                 .focus()
-                .setTextSelection({ from, to })
+                .setTextSelection({ from: fromPos, to: toPos })
                 .insertContent(suggestion.suggestion)
                 .run();
 
-            // 적용된 제안 제거
             setSuggestions(prev => prev.filter(s => s !== suggestion));
 
-            // 적용 후 텍스트를 lastAnalyzedText로 설정하여 재분석 방지
             setTimeout(() => {
-                setLastAnalyzedText(editor.getText().trim());
+                const updatedText = editor.getText().trim();
+                setLastAnalyzedText(updatedText);
                 setIsApplying(false);
-            }, 500);
-        } else {
-            console.log('텍스트를 찾을 수 없음');
+            }, 300);
+
+        } catch (error) {
+            console.error('제안 적용 중 오류:', error);
             setIsApplying(false);
         }
     };
@@ -685,20 +574,59 @@ ${text}
 
         setIsApplying(true);
 
-        // 뒤에서부터 적용 (위치가 바뀌는 것 방지)
-        const sortedSuggestions = [...suggestions].reverse();
+        const sortedSuggestions = [...suggestions].sort((a, b) => {
+            const textContent = editor.state.doc.textContent;
+            const indexA = textContent.indexOf(a.original);
+            const indexB = textContent.indexOf(b.original);
+            return indexB - indexA;
+        });
 
-        sortedSuggestions.forEach((suggestion, index) => {
+        let applied = 0;
+        sortedSuggestions.forEach((suggestion) => {
             setTimeout(() => {
-                applySuggestion(suggestion);
+                if (suggestion.original && suggestion.suggestion) {
+                    const { state } = editor;
+                    const { doc } = state;
+                    const fullText = doc.textContent;
+                    const index = fullText.indexOf(suggestion.original);
 
-                // 마지막 제안 적용 후
-                if (index === sortedSuggestions.length - 1) {
-                    setTimeout(() => {
-                        setIsApplying(false);
-                    }, 500);
+                    if (index !== -1) {
+                        let fromPos = 0;
+                        let toPos = 0;
+                        let found = false;
+
+                        doc.forEach((node, offset) => {
+                            if (!found) {
+                                const nodeText = node.textContent;
+                                const posInNode = nodeText.indexOf(suggestion.original);
+
+                                if (posInNode !== -1) {
+                                    fromPos = offset + posInNode;
+                                    toPos = fromPos + suggestion.original.length;
+                                    found = true;
+                                }
+                            }
+                        });
+
+                        if (found) {
+                            editor
+                                .chain()
+                                .focus()
+                                .setTextSelection({ from: fromPos, to: toPos })
+                                .insertContent(suggestion.suggestion)
+                                .run();
+
+                            applied++;
+                        }
+                    }
                 }
-            }, index * 200);
+
+                if (applied === sortedSuggestions.length) {
+                    setSuggestions([]);
+                    setLastAnalyzedText(editor.getText().trim());
+                    setIsApplying(false);
+                }
+            }, applied * 100);
         });
     };
 
@@ -720,41 +648,11 @@ ${text}
                             return from !== to
                         }}
                     >
-                        <button
-                            onClick={() => editor.chain().focus().toggleBold().run()}
-                            className={editor.isActive('bold') ? 'is-active' : ''}
-                            title="굵게"
-                        >
-                            <Bold size={18} />
-                        </button>
-                        <button
-                            onClick={() => editor.chain().focus().toggleItalic().run()}
-                            className={editor.isActive('italic') ? 'is-active' : ''}
-                            title="기울임"
-                        >
-                            <Italic size={18} />
-                        </button>
-                        <button
-                            onClick={() => editor.chain().focus().toggleUnderline().run()}
-                            className={editor.isActive('underline') ? 'is-active' : ''}
-                            title="밑줄"
-                        >
-                            <UnderlineIcon size={18} />
-                        </button>
-                        <button
-                            onClick={() => editor.chain().focus().toggleStrike().run()}
-                            className={editor.isActive('strike') ? 'is-active' : ''}
-                            title="취소선"
-                        >
-                            <Strikethrough size={18} />
-                        </button>
-                        <button
-                            onClick={() => editor.chain().focus().toggleHighlight().run()}
-                            className={editor.isActive('highlight') ? 'is-active' : ''}
-                            title="형광펜"
-                        >
-                            <Highlighter size={18} />
-                        </button>
+                        <button onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'is-active' : ''} title="굵게"><Bold size={18} /></button>
+                        <button onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'is-active' : ''} title="기울임"><Italic size={18} /></button>
+                        <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'is-active' : ''} title="밑줄"><UnderlineIcon size={18} /></button>
+                        <button onClick={() => editor.chain().focus().toggleStrike().run()} className={editor.isActive('strike') ? 'is-active' : ''} title="취소선"><Strikethrough size={18} /></button>
+                        <button onClick={() => editor.chain().focus().toggleHighlight().run()} className={editor.isActive('highlight') ? 'is-active' : ''} title="형광펜"><Highlighter size={18} /></button>
                         <div className="bubble-menu-divider"></div>
                         <button
                             onClick={() => {
@@ -818,7 +716,15 @@ ${text}
                     )}
 
                     {!isAnalyzing && suggestions.map((suggestion, index) => (
-                        <div key={index} className="suggestion-card">
+                        <div
+                            key={index}
+                            className="suggestion-card"
+                            onMouseEnter={() => highlightSuggestion(suggestion)}
+                            onMouseLeave={() => clearHighlight()}
+                            style={highlightRange ? {
+                                backgroundColor: highlightRange === true ? 'rgba(102, 126, 234, 0.1)' : '#f9fafb'
+                            } : {}}
+                        >
                             <div className="suggestion-header">
                                 <div className={`suggestion-badge ${suggestion.type}`}>
                                     {suggestion.type === 'spelling' && '맞춤법'}
