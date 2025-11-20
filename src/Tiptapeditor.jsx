@@ -497,6 +497,10 @@ const MenuBar = ({ editor }) => {
 const TiptapEditor = () => {
     const [showAIModal, setShowAIModal] = useState(false);
     const [selectedText, setSelectedText] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [lastAnalyzedText, setLastAnalyzedText] = useState('');
+    const [isApplying, setIsApplying] = useState(false);
 
     const editor = useEditor({
         extensions: [
@@ -515,8 +519,7 @@ const TiptapEditor = () => {
         굵게, 기울임, 밑줄 등을 바로 적용할 수 있습니다.
       </p>
       <p>
-        새로운 빈 줄을 추가하면 <strong>Floating Menu</strong>가 나타납니다. 
-        제목이나 목록을 빠르게 선택할 수 있어요.
+        <strong>Ctrl + Enter</strong>를 누르면 AI가 맞춤법과 어순을 분석하여 개선 제안을 제공합니다.
       </p>
       <p></p>
     `,
@@ -524,82 +527,340 @@ const TiptapEditor = () => {
             attributes: {
                 class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl focus:outline-none',
             },
+            handleKeyDown: (view, event) => {
+                // Ctrl + Enter (또는 Mac의 Cmd + Enter)로 AI 분석 트리거
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    const text = view.state.doc.textContent.trim();
+                    if (text.length > 10 && text !== lastAnalyzedText && !isAnalyzing && !isApplying) {
+                        analyzeSentence(text);
+                    }
+                    return true;
+                }
+                return false;
+            },
         },
     });
 
+    const analyzeSentence = async (text) => {
+        // 이미 분석 중이거나 적용 중이면 중단
+        if (isAnalyzing || isApplying) return;
+
+        setIsAnalyzing(true);
+        setLastAnalyzedText(text);
+
+        try {
+            const prompt = `당신은 한국어 교정 전문가입니다. 다음 텍스트의 맞춤법과 어순만 검토하여 개선 제안을 제공해주세요.
+
+[중요 규칙]
+1. 맞춤법 오류만 찾기 (띄어쓰기, 철자, 맞춤법)
+2. 어색한 어순만 개선하기
+3. 명확한 오류가 있을 때만 제안
+4. 최대 3개까지만 제안
+5. 반드시 JSON 배열 형식으로만 답변
+6. 다른 설명 절대 추가하지 말 것
+
+[텍스트]
+${text}
+
+[응답 형식 - 이 형식만 사용하세요]
+[
+  {
+    "type": "spelling",
+    "title": "맞춤법 오류",
+    "description": "올바른 맞춤법으로 수정이 필요합니다",
+    "original": "틀린 부분",
+    "suggestion": "올바른 표현"
+  },
+  {
+    "type": "grammar",
+    "title": "어순 개선",
+    "description": "어순을 바꾸면 더 자연스럽습니다",
+    "original": "어색한 부분",
+    "suggestion": "개선된 표현"
+  }
+]
+
+[제안 (위 형식의 JSON 배열만 출력)]`;
+
+            const response = await fetch('http://localhost:11434/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'llama3.1:8b',
+                    prompt: prompt,
+                    stream: false,
+                    options: {
+                        temperature: 0.1,  // 더 정확한 분석을 위해 낮춤
+                        top_p: 0.9,
+                        max_tokens: 800,
+                    }
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                try {
+                    const result = data.response.trim();
+                    console.log('AI 응답:', result);
+
+                    // JSON 배열 추출
+                    const jsonMatch = result.match(/\[[\s\S]*\]/);
+
+                    if (jsonMatch) {
+                        const parsedSuggestions = JSON.parse(jsonMatch[0]);
+                        console.log('파싱된 제안:', parsedSuggestions);
+
+                        // original과 suggestion이 있는 제안만 필터링
+                        const validSuggestions = parsedSuggestions.filter(s =>
+                            s.original && s.suggestion && s.original !== s.suggestion
+                        ).slice(0, 3);
+
+                        setSuggestions(validSuggestions);
+                    } else {
+                        console.log('JSON 형식을 찾을 수 없음');
+                        setSuggestions([]);
+                    }
+                } catch (e) {
+                    console.error('JSON 파싱 오류:', e);
+                    setSuggestions([]);
+                }
+            }
+        } catch (error) {
+            console.error('분석 오류:', error);
+            setSuggestions([]);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    const applySuggestion = (suggestion) => {
+        if (!editor || !suggestion.original || !suggestion.suggestion) {
+            console.log('적용 불가:', suggestion);
+            return;
+        }
+
+        setIsApplying(true);
+
+        const { state } = editor;
+        const { doc } = state;
+        const text = doc.textContent;
+
+        console.log('전체 텍스트:', text);
+        console.log('찾을 텍스트:', suggestion.original);
+
+        const index = text.indexOf(suggestion.original);
+        if (index !== -1) {
+            const from = index;
+            const to = index + suggestion.original.length;
+
+            console.log('교체 위치:', from, '-', to);
+            console.log('교체할 내용:', suggestion.suggestion);
+
+            editor
+                .chain()
+                .focus()
+                .setTextSelection({ from, to })
+                .insertContent(suggestion.suggestion)
+                .run();
+
+            // 적용된 제안 제거
+            setSuggestions(prev => prev.filter(s => s !== suggestion));
+
+            // 적용 후 텍스트를 lastAnalyzedText로 설정하여 재분석 방지
+            setTimeout(() => {
+                setLastAnalyzedText(editor.getText().trim());
+                setIsApplying(false);
+            }, 500);
+        } else {
+            console.log('텍스트를 찾을 수 없음');
+            setIsApplying(false);
+        }
+    };
+
+    const applyAllSuggestions = () => {
+        if (suggestions.length === 0) return;
+
+        setIsApplying(true);
+
+        // 뒤에서부터 적용 (위치가 바뀌는 것 방지)
+        const sortedSuggestions = [...suggestions].reverse();
+
+        sortedSuggestions.forEach((suggestion, index) => {
+            setTimeout(() => {
+                applySuggestion(suggestion);
+
+                // 마지막 제안 적용 후
+                if (index === sortedSuggestions.length - 1) {
+                    setTimeout(() => {
+                        setIsApplying(false);
+                    }, 500);
+                }
+            }, index * 200);
+        });
+    };
+
+    const dismissSuggestion = (suggestion) => {
+        setSuggestions(prev => prev.filter(s => s !== suggestion));
+    };
+
     return (
-        <div className="tiptap-editor-container">
-            <MenuBar editor={editor} />
+        <div className="tiptap-editor-wrapper">
+            <div className="tiptap-editor-container">
+                <MenuBar editor={editor} />
 
-            {editor && (
-                <BubbleMenu
-                    className="bubble-menu"
-                    editor={editor}
-                    tippyOptions={{ duration: 100 }}
-                    shouldShow={({ editor, view, state, oldState, from, to }) => {
-                        // 텍스트가 실제로 선택되었을 때만 표시
-                        return from !== to
-                    }}
-                >
-                    <button
-                        onClick={() => editor.chain().focus().toggleBold().run()}
-                        className={editor.isActive('bold') ? 'is-active' : ''}
-                        title="굵게"
-                    >
-                        <Bold size={18} />
-                    </button>
-                    <button
-                        onClick={() => editor.chain().focus().toggleItalic().run()}
-                        className={editor.isActive('italic') ? 'is-active' : ''}
-                        title="기울임"
-                    >
-                        <Italic size={18} />
-                    </button>
-                    <button
-                        onClick={() => editor.chain().focus().toggleUnderline().run()}
-                        className={editor.isActive('underline') ? 'is-active' : ''}
-                        title="밑줄"
-                    >
-                        <UnderlineIcon size={18} />
-                    </button>
-                    <button
-                        onClick={() => editor.chain().focus().toggleStrike().run()}
-                        className={editor.isActive('strike') ? 'is-active' : ''}
-                        title="취소선"
-                    >
-                        <Strikethrough size={18} />
-                    </button>
-                    <button
-                        onClick={() => editor.chain().focus().toggleHighlight().run()}
-                        className={editor.isActive('highlight') ? 'is-active' : ''}
-                        title="형광펜"
-                    >
-                        <Highlighter size={18} />
-                    </button>
-                    <div className="bubble-menu-divider"></div>
-                    <button
-                        onClick={() => {
-                            const { from, to } = editor.state.selection;
-                            const text = editor.state.doc.textBetween(from, to, ' ');
-                            setSelectedText(text);
-                            setShowAIModal(true);
+                {editor && (
+                    <BubbleMenu
+                        className="bubble-menu"
+                        editor={editor}
+                        tippyOptions={{ duration: 100 }}
+                        shouldShow={({ editor, view, state, oldState, from, to }) => {
+                            return from !== to
                         }}
-                        className="ai-button"
-                        title="AI에게 물어보기"
                     >
-                        <Sparkles size={16} className="ai-icon" /> AI
-                    </button>
-                </BubbleMenu>
-            )}
+                        <button
+                            onClick={() => editor.chain().focus().toggleBold().run()}
+                            className={editor.isActive('bold') ? 'is-active' : ''}
+                            title="굵게"
+                        >
+                            <Bold size={18} />
+                        </button>
+                        <button
+                            onClick={() => editor.chain().focus().toggleItalic().run()}
+                            className={editor.isActive('italic') ? 'is-active' : ''}
+                            title="기울임"
+                        >
+                            <Italic size={18} />
+                        </button>
+                        <button
+                            onClick={() => editor.chain().focus().toggleUnderline().run()}
+                            className={editor.isActive('underline') ? 'is-active' : ''}
+                            title="밑줄"
+                        >
+                            <UnderlineIcon size={18} />
+                        </button>
+                        <button
+                            onClick={() => editor.chain().focus().toggleStrike().run()}
+                            className={editor.isActive('strike') ? 'is-active' : ''}
+                            title="취소선"
+                        >
+                            <Strikethrough size={18} />
+                        </button>
+                        <button
+                            onClick={() => editor.chain().focus().toggleHighlight().run()}
+                            className={editor.isActive('highlight') ? 'is-active' : ''}
+                            title="형광펜"
+                        >
+                            <Highlighter size={18} />
+                        </button>
+                        <div className="bubble-menu-divider"></div>
+                        <button
+                            onClick={() => {
+                                const { from, to } = editor.state.selection;
+                                const text = editor.state.doc.textBetween(from, to, ' ');
+                                setSelectedText(text);
+                                setShowAIModal(true);
+                            }}
+                            className="ai-button"
+                            title="AI에게 물어보기"
+                        >
+                            <Sparkles size={16} className="ai-icon" /> AI
+                        </button>
+                    </BubbleMenu>
+                )}
 
-            <EditorContent editor={editor} className="editor-content" />
+                <EditorContent editor={editor} className="editor-content" />
 
-            <AICommandModal
-                isOpen={showAIModal}
-                onClose={() => setShowAIModal(false)}
-                selectedText={selectedText}
-                editor={editor}
-            />
+                <AICommandModal
+                    isOpen={showAIModal}
+                    onClose={() => setShowAIModal(false)}
+                    selectedText={selectedText}
+                    editor={editor}
+                />
+            </div>
+
+            {/* AI Suggestions Sidebar */}
+            <div className="ai-suggestions-sidebar">
+                <div className="suggestions-header">
+                    <div className="suggestions-title">
+                        <Sparkles size={18} className="suggestions-icon" />
+                        <h3>AI 제안</h3>
+                    </div>
+                    {suggestions.length > 0 && (
+                        <button
+                            className="apply-all-button"
+                            onClick={applyAllSuggestions}
+                            disabled={isApplying}
+                        >
+                            <Check size={16} />
+                            모두 적용
+                        </button>
+                    )}
+                </div>
+
+                <div className="suggestions-list">
+                    {isAnalyzing && (
+                        <div className="analyzing-state">
+                            <div className="analyzing-spinner"></div>
+                            <p>AI가 분석 중...</p>
+                        </div>
+                    )}
+
+                    {!isAnalyzing && suggestions.length === 0 && (
+                        <div className="empty-suggestions">
+                            <MessageSquare size={32} className="empty-icon" />
+                            <p><strong>Ctrl + Enter</strong>를 눌러</p>
+                            <p>맞춤법과 어순을 검사하세요</p>
+                            <p className="empty-hint">텍스트가 10자 이상일 때 작동합니다</p>
+                        </div>
+                    )}
+
+                    {!isAnalyzing && suggestions.map((suggestion, index) => (
+                        <div key={index} className="suggestion-card">
+                            <div className="suggestion-header">
+                                <div className={`suggestion-badge ${suggestion.type}`}>
+                                    {suggestion.type === 'spelling' && '맞춤법'}
+                                    {suggestion.type === 'grammar' && '어순'}
+                                    {suggestion.type === 'style' && '스타일'}
+                                </div>
+                                <button
+                                    className="dismiss-button"
+                                    onClick={() => dismissSuggestion(suggestion)}
+                                    title="무시"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+
+                            <h4 className="suggestion-title">{suggestion.title}</h4>
+                            <p className="suggestion-description">{suggestion.description}</p>
+
+                            {suggestion.original && suggestion.suggestion && (
+                                <div className="suggestion-change">
+                                    <div className="change-from">
+                                        <X size={14} className="change-icon" />
+                                        <span>{suggestion.original}</span>
+                                    </div>
+                                    <div className="change-to">
+                                        <Check size={14} className="change-icon" />
+                                        <span>{suggestion.suggestion}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                className="apply-suggestion-button"
+                                onClick={() => applySuggestion(suggestion)}
+                                disabled={isApplying}
+                            >
+                                적용하기
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };
